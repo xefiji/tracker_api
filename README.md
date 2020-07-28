@@ -20,6 +20,8 @@ This is a work in progress: it just logs coords and datas for the moment.
 
 Datas come from a [Pytrack](https://docs.pycom.io/datasheets/boards/pytrack/) with a [Lopy4](https://docs.pycom.io/gettingstarted/connection/lopy4/) on top of it.
 
+Device's code [available here](https://github.com/xefiji/pytrack_lopy)
+
 ![Pytrack](https://pycom.io/wp-content/uploads/2020/03/Website-Product-Shots-Pytrack-LoPy4.png)
 
 ## Further
