@@ -2,7 +2,6 @@ version: '3.3'
 services:
 
   # For PI
-services:
   mariadb:
     image: tobi312/rpi-mariadb:10.3  
     volumes:
