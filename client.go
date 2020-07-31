@@ -73,7 +73,7 @@ func publish(req []byte) {
 	if err := token.Error(); err != nil {
 		log.Printf("error while publishing %s\n", err)
 	} else {
-		log.Printf("published %s\n", req)
+		log.Printf("published to topic [%s]\n%s\n", topic, req)
 	}
 
 	disconnect()
@@ -83,9 +83,7 @@ func publish(req []byte) {
 func consume() {
 	connect(clientIdPrefix, mqtturi, consumerType)
 
-	if token := client.Subscribe(topic, qosLevel, func(client mqtt.Client, msg mqtt.Message) {
-		fmt.Printf("* [%s] %s\n", msg.Topic(), string(msg.Payload()))
-	}); token.Wait() && token.Error() != nil {
+	if token := client.Subscribe(topic, qosLevel, messageHandler); token.Wait() && token.Error() != nil {
 		panic(token.Error())
 	}
 
