@@ -4,7 +4,7 @@ services:
   # For PI
 services:
   mariadb:
-    image: tobi312/rpi-mariadb:TAG    
+    image: tobi312/rpi-mariadb:10.3  
     volumes:
       - ./mariadb:/var/lib/mysql    
     environment:
