@@ -44,12 +44,12 @@ var messageHandler = func(client mqtt.Client, msg mqtt.Message) {
 	if true == validateRequest(sigfoxRequest) {
 		lat, lon := parseCoords(sigfoxRequest.Data)
 		log.Printf("LAT: %f, LON: %f", lat, lon)
-		stmt, err := db.Prepare("INSERT INTO position (lat, lon, at) VALUES(?,?,NOW())")
+		stmt, err := db.Prepare("INSERT INTO position (lat, lon, at) VALUES(?,?,FROM_UNIXTIME(?))")
 		if err != nil {
 			panic(err.Error())
 		}
 
-		_, err = stmt.Exec(lat, lon)
+		_, err = stmt.Exec(lat, lon, sigfoxRequest.Time)
 		if err != nil {
 			log.Fatal(err)
 		}
