@@ -13,7 +13,6 @@ import (
 )
 
 const (
-	topic          = "sigfox_tracker_datas"
 	clientIdPrefix = "tracker"
 	publisherType  = 1
 	consumerType   = 2
@@ -66,7 +65,7 @@ func connect(clientIdPrefix string, uri *url.URL, clientType int) {
 }
 
 //publish connects to mqtt broker and publishes raw request to topic
-func publish(req []byte) {
+func publish(topic string, req []byte) {
 	connect(clientIdPrefix, mqtturi, publisherType)
 
 	token := client.Publish(topic, qosLevel, false, req)
@@ -80,7 +79,7 @@ func publish(req []byte) {
 }
 
 //consume connects to mqtt broker and subscribes to topic then call handler
-func consume() {
+func consume(topic string) {
 	connect(clientIdPrefix, mqtturi, consumerType)
 
 	if token := client.Subscribe(topic, qosLevel, messageHandler); token.Wait() && token.Error() != nil {

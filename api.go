@@ -24,7 +24,7 @@ func api() {
 			return
 		}
 
-		publish(req)
+		publish(sigfoxTopic, req)
 	})
 
 	port := os.Getenv("API_PORT")

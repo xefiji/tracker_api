@@ -11,10 +11,17 @@ import (
 	"io"
 	"log"
 	"os"
+	"strconv"
+	"time"
 
 	mqtt "github.com/eclipse/paho.mqtt.golang"
 	_ "github.com/go-sql-driver/mysql"
 	"gopkg.in/go-playground/validator.v9"
+)
+
+const (
+	dateTimeFormat = "2006-01-02 15:04:05"
+	sigfoxTopic    = "sigfox_tracker_datas"
 )
 
 var (
@@ -37,21 +44,48 @@ func init() {
 var messageHandler = func(client mqtt.Client, msg mqtt.Message) {
 	log.Printf("handling from topic [%s]\n%s\n", msg.Topic(), string(msg.Payload()))
 
-	//todo should switch request according to topic
+	switch msg.Topic() {
+	case sigfoxTopic:
+		handleSigfoxMessage(msg)
+	default:
+		log.Printf("no handler for topic %s", msg.Topic())
+		return
 
+	}
+}
+
+//handleSigfoxMessage decodes and saves a sigfox payload
+func handleSigfoxMessage(msg mqtt.Message) {
 	sigfoxRequest := &requests.Sigfox{}
 	decodeRequest(bytes.NewReader(msg.Payload()), sigfoxRequest)
 	if true == validateRequest(sigfoxRequest) {
 		lat, lon := parseCoords(sigfoxRequest.Data)
 		log.Printf("LAT: %f, LON: %f", lat, lon)
-		stmt, err := db.Prepare("INSERT INTO position (lat, lon, at) VALUES(?,?,FROM_UNIXTIME(?))")
+
+		i, err := strconv.Atoi(sigfoxRequest.Time)
 		if err != nil {
-			panic(err.Error())
+			log.Println(err)
+			return
 		}
 
-		_, err = stmt.Exec(lat, lon, sigfoxRequest.Time)
+		location, err := time.LoadLocation("Europe/Paris")
 		if err != nil {
-			log.Fatal(err)
+			log.Println(err)
+			return
+		}
+
+		locale := time.Unix(int64(i), 0).In(location)
+
+		stmt, err := db.Prepare("INSERT INTO position (lat, lon, at, raw, origin) VALUES(?,?,?,?,?)")
+		if err != nil {
+			log.Println(err)
+			return
+		}
+
+		_, err = stmt.Exec(lat, lon, locale.Format(dateTimeFormat), msg.Payload(), msg.Topic())
+		if err != nil {
+			log.Println(err)
+			return
 		}
 	}
 }
