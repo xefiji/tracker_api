@@ -59,8 +59,8 @@ func handleSigfoxMessage(msg mqtt.Message) {
 	sigfoxRequest := &requests.Sigfox{}
 	decodeRequest(bytes.NewReader(msg.Payload()), sigfoxRequest)
 	if true == validateRequest(sigfoxRequest) {
-		lat, lon := parseCoords(sigfoxRequest.Data)
-		log.Printf("LAT: %f, LON: %f", lat, lon)
+		lat, lon, alt := parseCoords(sigfoxRequest.Data)
+		log.Printf("LAT: %f, LON: %f, ALT: %f", lat, lon, alt)
 
 		i, err := strconv.Atoi(sigfoxRequest.Time)
 		if err != nil {
@@ -76,13 +76,13 @@ func handleSigfoxMessage(msg mqtt.Message) {
 
 		locale := time.Unix(int64(i), 0).In(location)
 
-		stmt, err := db.Prepare("INSERT INTO position (lat, lon, at, raw, origin) VALUES(?,?,?,?,?)")
+		stmt, err := db.Prepare("INSERT INTO position (lat, lon, alt, at, raw, origin) VALUES(?,?,?,?,?,?)")
 		if err != nil {
 			log.Println(err)
 			return
 		}
 
-		_, err = stmt.Exec(lat, lon, locale.Format(dateTimeFormat), msg.Payload(), msg.Topic())
+		_, err = stmt.Exec(lat, lon, alt, locale.Format(dateTimeFormat), msg.Payload(), msg.Topic())
 		if err != nil {
 			log.Println(err)
 			return
@@ -116,25 +116,31 @@ func validateRequest(req interface{}) bool {
 	return true
 }
 
-//parseCoords gets a hexa string, splits it in two and parses coords by unpacking it
-func parseCoords(hexa string) (float32, float32) {
+//parseCoords gets a hexa string, splits it in 3 and parses coords by unpacking it
+func parseCoords(hexa string) (float32, float32, float32) {
 	b, err := hex.DecodeString(hexa)
 	if err != nil {
 		panic(err)
 	}
 
-	var lat, lon float32
+	var lat, lon, alt float32
 	buf := bytes.NewReader(b[:4])
 	err = binary.Read(buf, binary.LittleEndian, &lat)
 	if err != nil {
 		log.Println("binary.Read failed:", err)
 	}
 
-	buf = bytes.NewReader(b[4:])
+	buf = bytes.NewReader(b[4:8])
 	err = binary.Read(buf, binary.LittleEndian, &lon)
 	if err != nil {
 		log.Println("binary.Read failed:", err)
 	}
 
-	return lat, lon
+	buf = bytes.NewReader(b[8:])
+	err = binary.Read(buf, binary.LittleEndian, &alt)
+	if err != nil {
+		log.Println("binary.Read failed:", err)
+	}
+
+	return lat, lon, alt
 }
