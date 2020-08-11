@@ -22,6 +22,7 @@ import (
 const (
 	dateTimeFormat = "2006-01-02 15:04:05"
 	sigfoxTopic    = "sigfox_tracker_datas"
+	timeZone       = "Europe/Paris"
 )
 
 var (
@@ -55,12 +56,13 @@ var messageHandler = func(client mqtt.Client, msg mqtt.Message) {
 }
 
 //handleSigfoxMessage decodes and saves a sigfox payload
+//todo add speed
 func handleSigfoxMessage(msg mqtt.Message) {
 	sigfoxRequest := &requests.Sigfox{}
 	decodeRequest(bytes.NewReader(msg.Payload()), sigfoxRequest)
 	if true == validateRequest(sigfoxRequest) {
 		lat, lon, alt := parseCoords(sigfoxRequest.Data)
-		log.Printf("LAT: %f, LON: %f, ALT: %f", lat, lon, alt)
+		log.Printf("LAT: %f, LON: %f, ALT: %d", lat, lon, alt)
 
 		i, err := strconv.Atoi(sigfoxRequest.Time)
 		if err != nil {
@@ -68,7 +70,7 @@ func handleSigfoxMessage(msg mqtt.Message) {
 			return
 		}
 
-		location, err := time.LoadLocation("Europe/Paris")
+		location, err := time.LoadLocation(timeZone)
 		if err != nil {
 			log.Println(err)
 			return
@@ -76,7 +78,7 @@ func handleSigfoxMessage(msg mqtt.Message) {
 
 		locale := time.Unix(int64(i), 0).In(location)
 
-		stmt, err := db.Prepare("INSERT INTO position (lat, lon, alt, at, raw, origin) VALUES(?,?,?,?,?,?)")
+		stmt, err := db.Prepare("INSERT INTO position (lat, lon, alt, at, raw, origin, created_at) VALUES(?,?,?,?,?,?,NOW())")
 		if err != nil {
 			log.Println(err)
 			return
@@ -117,30 +119,39 @@ func validateRequest(req interface{}) bool {
 }
 
 //parseCoords gets a hexa string, splits it in 3 and parses coords by unpacking it
-func parseCoords(hexa string) (float32, float32, float32) {
+func parseCoords(hexa string) (float32, float32, uint16) {
 	b, err := hex.DecodeString(hexa)
 	if err != nil {
 		panic(err)
 	}
 
-	var lat, lon, alt float32
+	var (
+		lat, lon float32
+		alt      uint16
+	)
+
+	//latitude
 	buf := bytes.NewReader(b[:4])
 	err = binary.Read(buf, binary.LittleEndian, &lat)
 	if err != nil {
 		log.Println("binary.Read failed:", err)
 	}
 
+	//longitude
 	buf = bytes.NewReader(b[4:8])
 	err = binary.Read(buf, binary.LittleEndian, &lon)
 	if err != nil {
 		log.Println("binary.Read failed:", err)
 	}
 
+	//altitude
 	buf = bytes.NewReader(b[8:])
 	err = binary.Read(buf, binary.LittleEndian, &alt)
 	if err != nil {
 		log.Println("binary.Read failed:", err)
 	}
+
+	//todo: speed (one byte)
 
 	return lat, lon, alt
 }

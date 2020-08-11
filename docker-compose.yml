@@ -11,6 +11,7 @@ services:
       MYSQL_USER: '${DB_USER}'
       MYSQL_PASSWORD: '${DB_PASSWORD}'
       MYSQL_ROOT_PASSWORD: '${DB_PASSWORD}'
+      TZ: '${DB_TIMEZONE}'
     restart: unless-stopped
     ports:
       - 3306:3306
@@ -31,6 +32,7 @@ services:
 #       MYSQL_USER: '${DB_USER}'
 #       MYSQL_PASSWORD: '${DB_PASSWORD}'
 #       MYSQL_ROOT_PASSWORD: '${DB_PASSWORD}'
+#       TZ: '${DB_TIMEZONE}'
 #     ports:
 #       - '3306:3306'
 #     expose:
