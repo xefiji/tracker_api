@@ -3,14 +3,11 @@ package main
 import (
 	"api/requests"
 	"bytes"
-	"database/sql"
 	"encoding/binary"
 	"encoding/hex"
 	"encoding/json"
-	"fmt"
 	"io"
 	"log"
-	"os"
 	"strconv"
 	"time"
 
@@ -27,19 +24,7 @@ const (
 
 var (
 	validate *validator.Validate
-	db       *sql.DB
 )
-
-func init() {
-	user := os.Getenv("DB_USER")
-	password := os.Getenv("DB_PASSWORD")
-	dbname := os.Getenv("DB_NAME")
-	var err error
-	db, err = sql.Open("mysql", fmt.Sprintf("%s:%s@/%s", user, password, dbname))
-	if err != nil {
-		panic(err.Error())
-	}
-}
 
 //messageHandler takes care
 var messageHandler = func(client mqtt.Client, msg mqtt.Message) {
