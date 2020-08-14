@@ -65,10 +65,13 @@ func logHandler(handler http.Handler) http.Handler {
 
 //tracksHandler returns the recorded tracks for the given day
 func tracksHandler(w http.ResponseWriter, r *http.Request) {
-	if r.Method != http.MethodGet {
+
+	if r.Method != http.MethodGet && r.Method != http.MethodOptions {
 		http.Error(w, "not allowed", http.StatusMethodNotAllowed)
 		return
 	}
+
+	w.Header().Set("Access-Control-Allow-Origin", os.Getenv("CORS"))
 
 	day := r.URL.Query().Get("day")
 	if day == "" {
