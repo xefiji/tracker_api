@@ -14,8 +14,8 @@ import (
 
 const (
 	clientIdPrefix = "tracker"
-	publisherType  = 1
-	consumerType   = 2
+	publisherType  = "pub"
+	consumerType   = "sub"
 	qosLevel       = 1
 )
 
@@ -34,23 +34,16 @@ func init() {
 }
 
 //connect set an instance of mqtt client with options
-func connect(clientIdPrefix string, uri *url.URL, clientType int) {
+func connect(clientIdPrefix string, uri *url.URL, clientType string) {
 	if client != nil && client.IsConnected() {
 		return
 	}
 
 	opts := mqtt.NewClientOptions()
 	opts.AddBroker(fmt.Sprintf("tcp://%s", uri.Host))
-	clientId := fmt.Sprintf("%s_%d", clientIdPrefix, clientType)
+	clientId := fmt.Sprintf("%s_%s", clientIdPrefix, clientType)
 	opts.SetClientID(clientId)
-
-	switch clientType {
-	case publisherType:
-		//specific options if publisher
-	case consumerType:
-		//specific options if consumer
-		opts.SetCleanSession(false) //for persistent session (fifo queue)
-	}
+	opts.SetCleanSession(false) //for persistent session (fifo queue)
 
 	c := mqtt.NewClient(opts)
 	token := c.Connect()
@@ -74,8 +67,6 @@ func publish(topic string, req []byte) {
 	} else {
 		log.Printf("published to topic [%s]\n%s\n", topic, req)
 	}
-
-	disconnect()
 }
 
 //consume connects to mqtt broker and subscribes to topic then call handler
