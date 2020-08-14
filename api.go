@@ -17,6 +17,7 @@ type Position struct {
 	Alt    string `json:"alt"`
 	At     string `json:"at"`
 	Origin string `json:"origin"`
+	Batt   string `json:"batt"`
 }
 
 //api runs the http server for api endpoints
@@ -87,7 +88,7 @@ func tracksHandler(w http.ResponseWriter, r *http.Request) {
 
 	log.Printf("getting geo datas for day %s", day)
 
-	stmt, err := db.Prepare("SELECT lat, lon, alt, at, origin FROM position WHERE DATE(at) = ? ORDER BY id ASC")
+	stmt, err := db.Prepare("SELECT lat, lon, alt, at, origin, batt FROM position WHERE DATE(at) = ? ORDER BY id ASC")
 	if err != nil {
 		log.Println(err)
 		return
@@ -102,7 +103,7 @@ func tracksHandler(w http.ResponseWriter, r *http.Request) {
 	positions := make([]Position, 0)
 	for res.Next() {
 		var pos Position
-		err := res.Scan(&pos.Lat, &pos.Lon, &pos.Alt, &pos.At, &pos.Origin)
+		err := res.Scan(&pos.Lat, &pos.Lon, &pos.Alt, &pos.At, &pos.Origin, &pos.Batt)
 		if err != nil {
 			log.Println(err.Error())
 		} else {

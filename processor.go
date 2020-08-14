@@ -46,8 +46,8 @@ func handleSigfoxMessage(msg mqtt.Message) {
 	sigfoxRequest := &requests.Sigfox{}
 	decodeRequest(bytes.NewReader(msg.Payload()), sigfoxRequest)
 	if true == validateRequest(sigfoxRequest) {
-		lat, lon, alt := parseCoords(sigfoxRequest.Data)
-		log.Printf("LAT: %f, LON: %f, ALT: %d", lat, lon, alt)
+		lat, lon, alt, batt := parseCoords(sigfoxRequest.Data)
+		log.Printf("LAT: %f, LON: %f, ALT: %d, BATT: %d", lat, lon, alt, batt)
 
 		i, err := strconv.Atoi(sigfoxRequest.Time)
 		if err != nil {
@@ -63,13 +63,13 @@ func handleSigfoxMessage(msg mqtt.Message) {
 
 		locale := time.Unix(int64(i), 0).In(location)
 
-		stmt, err := db.Prepare("INSERT INTO position (lat, lon, alt, at, raw, origin, created_at) VALUES(?,?,?,?,?,?,NOW())")
+		stmt, err := db.Prepare("INSERT INTO position (lat, lon, alt, at, raw, origin, created_at, batt) VALUES(?,?,?,?,?,?,NOW(),?)")
 		if err != nil {
 			log.Println(err)
 			return
 		}
 
-		_, err = stmt.Exec(lat, lon, alt, locale.Format(dateTimeFormat), msg.Payload(), msg.Topic())
+		_, err = stmt.Exec(lat, lon, alt, locale.Format(dateTimeFormat), msg.Payload(), msg.Topic(), batt)
 		if err != nil {
 			log.Println(err)
 			return
@@ -103,16 +103,16 @@ func validateRequest(req interface{}) bool {
 	return true
 }
 
-//parseCoords gets a hexa string, splits it in 3 and parses coords by unpacking it
-func parseCoords(hexa string) (float32, float32, uint16) {
+//parseCoords gets a hexa string, splits it in 4 and parses coords, alt and batt voltage by unpacking it
+func parseCoords(hexa string) (float32, float32, uint16, uint16) {
 	b, err := hex.DecodeString(hexa)
 	if err != nil {
 		panic(err)
 	}
 
 	var (
-		lat, lon float32
-		alt      uint16
+		lat, lon  float32
+		alt, batt uint16
 	)
 
 	//latitude
@@ -130,13 +130,20 @@ func parseCoords(hexa string) (float32, float32, uint16) {
 	}
 
 	//altitude
-	buf = bytes.NewReader(b[8:])
+	buf = bytes.NewReader(b[8:10])
 	err = binary.Read(buf, binary.LittleEndian, &alt)
+	if err != nil {
+		log.Println("binary.Read failed:", err)
+	}
+
+	//battery's voltage
+	buf = bytes.NewReader(b[10:])
+	err = binary.Read(buf, binary.LittleEndian, &batt)
 	if err != nil {
 		log.Println("binary.Read failed:", err)
 	}
 
 	//todo: speed (one byte)
 
-	return lat, lon, alt
+	return lat, lon, alt, batt
 }
